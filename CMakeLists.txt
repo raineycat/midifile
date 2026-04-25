@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.21)
 
 project(midifile C CXX)
 set(CMAKE_CXX_STANDARD 11)
@@ -7,13 +7,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include(CheckIncludeFiles)
 include(GNUInstallDirs)
 
-include_directories(include)
-
 check_include_files(unistd.h HAVE_UNISTD_H)
 check_include_files(humdrum.h HAVE_HUMDRUM_H)
 check_include_files(sys/io.h HAVE_SYS_IO_H)
 
-option(BUILD_MIDILIBRARY_ONLY "Build only the midifile library" OFF)
+if(PROJECT_IS_TOP_LEVEL)
+    option(BUILD_MIDILIBRARY_ONLY "Build only the midifile library" OFF)
+else()
+    option(BUILD_MIDILIBRARY_ONLY "Build only the midifile library" ON)
+endif()
 
 ##############################
 ##
@@ -57,15 +59,18 @@ set(SRCS
 )
 
 set(HDRS
-    include/Binasc.h
-    include/MidiEvent.h
-    include/MidiEventList.h
-    include/MidiFile.h
-    include/MidiMessage.h
-    include/Options.h
+    include/midifile/Binasc.h
+    include/midifile/MidiEvent.h
+    include/midifile/MidiEventList.h
+    include/midifile/MidiFile.h
+    include/midifile/MidiMessage.h
+    include/midifile/Options.h
 )
 
 add_library(midifile STATIC ${SRCS} ${HDRS})
+add_library(midifile::midifile ALIAS midifile)
+
+target_include_directories(midifile PUBLIC include)
 
 ##############################
 ##
@@ -180,17 +185,15 @@ if(NOT BUILD_MIDILIBRARY_ONLY)
   target_link_libraries(type0 midifile)
   target_link_libraries(vlv midifile)
 
-endif()
-
-if(HAVE_UNISTD_H AND HAVE_SYS_IO_H)
+  if(HAVE_UNISTD_H AND HAVE_SYS_IO_H)
     add_executable(midi2beep tools/midi2beep.cpp)
 
     target_link_libraries(midi2beep midifile)
-endif()
+  endif()
 
-# The following programs require headers from humextra repository.
-# <https://github.com/humdrum-tools/humextra>
-if(HAVE_HUMDRUM_H)
+  # The following programs require headers from humextra repository.
+  # <https://github.com/humdrum-tools/humextra>
+  if(HAVE_HUMDRUM_H)
     add_executable(henonfile tools/henonfile.cpp)
     add_executable(mid2hum tools/mid2hum.cpp)
     add_executable(midiexcerpt tools/midiexcerpt.cpp)
@@ -200,6 +203,7 @@ if(HAVE_HUMDRUM_H)
     target_link_libraries(mid2hum midifile)
     target_link_libraries(midiexcerpt midifile)
     target_link_libraries(peep2midi midifile)
+  endif()
 endif()
 
 install(TARGETS midifile
